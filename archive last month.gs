@@ -4,61 +4,58 @@
  * */
 function archive() {
   try {
-
-    var months = ['January', 'Febuary', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-
-    //a variable to hold the current month
-    let month = new Date ().getMonth ();
-
-    //a variable to hold the year of last month's submissions, if we are in January, the year should be last year
-    let year;
-    if (month === 0)
-      year = 11;
     
-    else 
-      year = new Date ().getFullYear ();
+    //Form Responses 1
+    let sheet = SpreadsheetApp.getActiveSheet ();
 
-    const sheet = SpreadsheetApp.getActiveSpreadsheet ().getSheetByName ('Form Responses 1');
-    const newSheet = SpreadsheetApp.getActiveSpreadsheet ().insertSheet ('Archive Responses ' + months [month - 1] + ' ' + year);
+    var months = ["January", "Feburary", "March", "April", "May", "June", "July",
+    "August", "September", "October", "November", "December"];
 
-    //copy the formatting of the first row to the new sheet
-    sheet.getRange ('A1:K1').copyTo (newSheet.getRange ('A1:K1'));
-    //make the columns fit the words
-    newSheet.autoResizeColumns (1, 11);
-    //make words bold as they are in the original sheet
-    newSheet.getRange (1, 1, 1, 11).setTextStyle (SpreadsheetApp.newTextStyle ().setBold (true).build ()); 
+    //get the int representing last month
+    var lastMonth = new Date ().getMonth () - 1;
 
-    var i = 2;
-    for (i; i < sheet.getMaxRows (); i++) {
+    //turn that int to a name using the months array
+    var lastMonthName = lastMonth == -1 ? months[11] : months[lastMonth];
 
-      const date = new Date (sheet.getRange ('A'+ i).getValue ());
+    //get the year which last month was in, (these ternary operators are used to see if last month was December, because if this month is January the index would be 0 and 0 - 1 is not 11 but rather -1 so we need to manually check that)
+    var year = lastMonth == -1 ? new Date ().getFullYear () - 1 : new Date ().getFullYear ();
 
-      //if the row being looked at was a submission from the last month
-      if (date.getMonth () < month || new Date ().getFullYear () > date.getFullYear ()) {
+    //create a new sheet for to put last month's responses in
+    let newSheet = SpreadsheetApp.getActiveSpreadsheet ().insertSheet (1);
+    var name = "Archive Responses " + lastMonthName + " " + year;
+    newSheet.setName (name);
 
-       newSheet.appendRow (sheet.getRange (i + ':' + i).getValues ()[0]);
+    //copy over the formatting to newSheet
+    sheet.getRange ('A1:L1').copyTo (newSheet.getRange ('A1:L1'));
+    newSheet.getRange ('A1:L1').setTextStyle (SpreadsheetApp.newTextStyle ().setBold (true).build ());
+    
+    //copy over last month's submissions
+    var thisMonth = new Date ().getMonth ();
+    for (i = 2; i < sheet.getMaxRows (); i++) {
 
-       //add back the formatting, which is just the background color of the Clock In /Clock Out column
-       if (newSheet.getRange (newSheet.getLastRow (), 4).getValue () === 'Clock OUT')
-        newSheet.getRange (newSheet.getLastRow (), 4).setBackground ('#e06666');
+      //continue the loop as long as we don't encouter a submission of this month
+      if (new Date (sheet.getRange ('A2').getValue ()).getMonth () < thisMonth)
+      {
+        newSheet.appendRow (sheet.getRange (2 + ':' + 2).getValues ()[0]);
+        sheet.deleteRow (2);
 
+        //change the CLOCK IN or CLOCK OUT column to correct background color
+        if (newSheet.getRange ('D' + i).getValue () === 'Clock IN')
+          newSheet.getRange ('D' + i).setBackground ('#b7e1cd');
         else
-          newSheet.getRange (newSheet.getLastRow (), 4).setBackground ('#b7e1cd');
-        
-      }
+          newSheet.getRange ('D' + i).setBackground ('#e06666');
 
-      //if we reached a row whose date is not in the previous' month, stop looping as the rest of the rows/submissions will be for the current month
-      else
+      }
+      else 
         break;
     }
 
-    //resize the columns to fit their text
-    newSheet.autoResizeColumns (1, newSheet.getLastColumn ());
+    //resize all the columns to fit the text properly
+    newSheet.autoResizeColumns (1, newSheet.getMaxColumns ()); 
 
-    //delete last month's submissions from the main sheet
-    sheet.deleteRows (2, i);
+    
   }
   catch (error) {
-    console.log (error);
+    Logger.log (error);
   }
 }
